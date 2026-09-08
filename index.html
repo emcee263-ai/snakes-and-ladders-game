@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Snakes &amp; Ladders</title>
+
+<!-- Supabase JS (UMD build — plain <script> tag, no bundler needed) -->
+<script>src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  :root{
+    --bg1:#0f172a; --bg2:#1e293b; --accent:#22d3ee; --accent2:#f97316;
+    --light:#f8fafc; --muted:#94a3b8; --card:#111827cc;
+    --p1:#ef4444; --p2:#3b82f6; --p3:#22c55e; --p4:#eab308;
+    --wood1:#a9662f; --wood2:#7c4a1e;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; height:100%; overflow-x:hidden;}
+  body{
+    font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    background:radial-gradient(circle at 20% 0%, #1e293b, #020617 70%);
+    color:var(--light);
+    min-height:100vh;
+    display:flex; flex-direction:column; align-items:center;
+    padding:10px;
+  }
+  h1{
+    font-size:1.4rem; margin:6px 0 10px; letter-spacing:1px;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+    text-align:center;
+  }
+  h2.subtitle{font-size:1rem; color:var(--muted); margin:0 0 14px; text-align:center; font-weight:500;}
+  .hidden{display:none !important;}
+  .card{
+    width:100%; max-width:420px; background:var(--card); border-radius:16px;
+    padding:20px; box-shadow:0 10px 30px rgba(0,0,0,.5);
+  }
+  .big-btn{
+    width:100%; padding:18px; margin-bottom:12px; border:none; border-radius:14px;
+    font-weight:800; font-size:1.02rem; cursor:pointer; text-align:left; display:flex;
+    align-items:center; gap:12px; color:#fff; box-shadow:0 6px 16px rgba(0,0,0,.35);
+  }
+  .big-btn .emoji{font-size:1.6rem;}
+  .big-btn small{display:block; font-weight:500; opacity:.85; font-size:.75rem; margin-top:2px;}
+  #btnLocal{background:linear-gradient(135deg,#0ea5e9,#0369a1);}
+  #btnOnline{background:linear-gradient(135deg,#f97316,#c2410c);}
+  .backLink{background:none; border:none; color:var(--muted); font-size:.85rem; cursor:pointer; margin-bottom:10px; padding:4px 0;}
+
+  .setup-row{margin-bottom:16px;}
+  .setup-row label{display:block; font-size:.85rem; color:var(--muted); margin-bottom:8px;}
+  .choice-group{display:flex; gap:8px; flex-wrap:wrap;}
+  .choice-btn{
+    flex:1; min-width:60px; padding:10px 6px; border-radius:10px; border:2px solid #334155;
+    background:#0f172a; color:var(--light); font-size:.95rem; font-weight:600; cursor:pointer;
+  }
+  .choice-btn.active{border-color:var(--accent); background:#083344; color:var(--accent);}
+  .mode-btn{width:100%; padding:12px; border-radius:10px; border:2px solid #334155; background:#0f172a;
+    color:var(--light); font-weight:700; margin-bottom:8px; cursor:pointer; font-size:.9rem; text-align:left;}
+  .mode-btn small{display:block; font-weight:500; color:var(--muted); font-size:.72rem; margin-top:3px;}
+  .mode-btn.active.normal{border-color:#22c55e; background:#052e16;}
+  .mode-btn.active.hard{border-color:#ef4444; background:#2a0a0a;}
+  input[type=text]{
+    width:100%; padding:12px; border-radius:10px; border:2px solid #334155; background:#0f172a;
+    color:var(--light); font-size:1rem;
+  }
+  input#joinCode{text-transform:uppercase; letter-spacing:3px; text-align:center; font-weight:800; font-size:1.2rem;}
+  .primary-btn{
+    width:100%; padding:14px; margin-top:10px; border:none; border-radius:12px;
+    background:linear-gradient(90deg,var(--accent),#06b6d4); color:#022; font-weight:800;
+    font-size:1.02rem; cursor:pointer;
+  }
+  .primary-btn:disabled{opacity:.4;}
+  .hint{font-size:.72rem; color:var(--muted); margin-top:6px; line-height:1.4;}
+  .errorMsg{color:#f87171; font-size:.8rem; margin-top:8px; min-height:16px;}
+
+  #roomCodeBig{
+    font-size:2.2rem; font-weight:900; letter-spacing:6px; text-align:center; color:var(--accent);
+    background:#0b1220; border-radius:12px; padding:14px; margin-bottom:14px; border:2px dashed #22d3ee55;
+  }
+  .lobbyList{list-style:none; padding:0; margin:0 0 14px;}
+  .lobbyList li{
+    display:flex; align-items:center; gap:10px; padding:10px; border-radius:10px; background:#0b1220;
+    margin-bottom:6px; font-size:.85rem;
+  }
+  .lobbyList .dot{width:12px; height:12px; border-radius:50%; flex-shrink:0;}
+  .lobbyList .tag{margin-left:auto; font-size:.68rem; color:var(--muted);}
+
+  #game{width:100%; max-width:520px; display:flex; flex-direction:column; align-items:center;}
+  #topbar{
+    width:100%; display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:8px; font-size:.8rem; color:var(--muted);
+  }
+  #topbar button{
+    background:#1e293b; border:1px solid #334155; color:var(--light); padding:6px 10px;
+    border-radius:8px; font-size:.72rem; cursor:pointer;
+  }
+  #modeTag{padding:3px 10px; border-radius:20px; font-weight:700; font-size:.68rem;}
+  #modeTag.normal{background:#052e16; color:#22c55e;}
+  #modeTag.hard{background:#2a0a0a; color:#ef4444;}
+  #roomTag{padding:3px 10px; border-radius:20px; font-weight:700; font-size:.68rem; background:#082f49; color:#38bdf8;}
+
+  #players{display:flex; gap:6px; width:100%; margin-bottom:8px; flex-wrap:wrap; justify-content:center;}
+  .pchip{
+    display:flex; align-items:center; gap:6px; background:#111827; border:2px solid transparent;
+    border-radius:10px; padding:5px 8px; font-size:.72rem; opacity:.55;
+  }
+  .pchip.active{opacity:1; border-color:var(--accent); box-shadow:0 0 10px rgba(34,211,238,.3);}
+  .pchip.done{opacity:.35;}
+  .dot{width:12px; height:12px; border-radius:50%;}
+  .pchip .pos{color:var(--muted);}
+
+  #boardWrap{
+    width:100%; aspect-ratio:1/1; max-width:500px; position:relative; border-radius:16px;
+    overflow:hidden; box-shadow:0 12px 30px rgba(0,0,0,.65);
+    border:9px solid; border-image:linear-gradient(135deg,var(--wood1),var(--wood2)) 1;
+    background:#5a3417;
+  }
+  #board{
+    display:grid; grid-template-columns:repeat(10,1fr); grid-template-rows:repeat(10,1fr);
+    width:100%; height:100%; position:relative; z-index:1;
+  }
+  .cell{
+    position:relative; display:flex; align-items:flex-start; justify-content:flex-start;
+    font-size:.62rem; font-weight:800; padding:3px 4px;
+  }
+  .cell.even{background:#f2e6c9; color:#4a3418;}
+  .cell.odd{background:#dcc48f; color:#4a3418;}
+  .cell.start{background:linear-gradient(135deg,#86efac,#22c55e); color:#052e16;}
+  .cell.finish{background:linear-gradient(135deg,#fde68a,#f59e0b); color:#451a03;}
+  .cell.snake-cell::after{content:"🐍"; position:absolute; right:2px; bottom:1px; font-size:.7rem; opacity:.55;}
+  .cell.ladder-cell::after{content:"🪜"; position:absolute; right:2px; bottom:1px; font-size:.7rem; opacity:.55;}
+  #svgOverlay{position:absolute; inset:0; z-index:2; pointer-events:none; width:100%; height:100%;}
+  .tokens-layer{position:absolute; inset:0; z-index:3; pointer-events:none;}
+  .token{
+    position:absolute; width:9.5%; height:9.5%; border-radius:50%; border:2.5px solid #fff;
+    box-shadow:0 3px 8px rgba(0,0,0,.55); transition:left .32s ease,top .32s ease;
+    display:flex; align-items:center; justify-content:center; font-size:.6rem; font-weight:900; color:#fff;
+  }
+
+  #controls{width:100%; max-width:500px; display:flex; align-items:center; gap:14px; margin-top:14px; justify-content:center;}
+  #diceBox{
+    width:60px; height:60px; background:#fff; border-radius:14px; display:flex; align-items:center;
+    justify-content:center; font-size:1.8rem; font-weight:900; color:#111827; box-shadow:0 6px 14px rgba(0,0,0,.5);
+    user-select:none;
+  }
+  #diceBox.rolling{animation:shake .5s infinite;}
+  @keyframes shake{0%,100%{transform:rotate(0)}25%{transform:rotate(-12deg)}75%{transform:rotate(12deg)}}
+  #rollBtn{
+    padding:16px 26px; border:none; border-radius:14px; font-weight:800; font-size:1rem;
+    background:linear-gradient(90deg,var(--accent2),#fb923c); color:#1a0900; cursor:pointer;
+    box-shadow:0 6px 16px rgba(249,115,22,.4);
+  }
+  #rollBtn:disabled{opacity:.4; cursor:default;}
+  #turnMsg{width:100%; max-width:500px; text-align:center; margin-top:10px; min-height:20px; font-size:.85rem; color:var(--muted);}
+  #log{
+    width:100%; max-width:500px; margin-top:10px; background:#0b1220; border-radius:10px;
+    padding:8px 10px; font-size:.72rem; color:#94a3b8; max-height:90px; overflow-y:auto;
+  }
+  #winOverlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.78); display:flex; align-items:center;
+    justify-content:center; z-index:50; flex-direction:column; gap:16px; text-align:center; padding:20px;
+  }
+  #winOverlay h2{font-size:1.6rem; margin:0;}
+  #winOverlay button{padding:12px 24px; border-radius:12px; border:none; font-weight:800; background:var(--accent); cursor:pointer;}
+</style>
+</head>
+<body>
+
+<h1>🐍 SNAKES &amp; LADDERS 🪜</h1>
+
+<div id="home" class="card">
+  <h2 class="subtitle">How do you want to play?</h2>
+  <button class="big-btn" id="btnLocal"><span class="emoji">📱</span>
+    <span>Face-to-Face<small>Pass one phone around · 2-4 players + bots</small></span>
+  </button>
+  <button class="big-btn" id="btnOnline"><span class="emoji">🌐</span>
+    <span>Play Online<small>Share a room code · play from separate phones</small></span>
+  </button>
+  <div class="hint" id="backendStatus"></div>
+</div>
+
+<div id="localSetup" class="card hidden">
+  <button class="backLink" data-back="home">‹ Back</button>
+  <div class="setup-row">
+    <label>Total players (2-4)</label>
+    <div class="choice-group" id="totalGroup">
+      <button class="choice-btn" data-val="2">2</button>
+      <button class="choice-btn" data-val="3">3</button>
+      <button class="choice-btn" data-val="4">4</button>
+    </div>
+  </div>
+  <div class="setup-row">
+    <label>Human players</label>
+    <div class="choice-group" id="humanGroup"></div>
+    <div class="hint">Remaining slots are filled by computer bots.</div>
+  </div>
+  <div class="setup-row">
+    <label>Difficulty</label>
+    <button class="mode-btn normal active" data-mode="normal" id="normalBtn">🙂 NORMAL
+      <small>Friendly board · rolling a 6 always gives a bonus turn</small></button>
+    <button class="mode-btn hard" data-mode="hard" id="hardBtn">🔥 HARD
+      <small>Meaner snakes, exact roll needed to win, rolling a 6 only sometimes gives a bonus turn</small></button>
+  </div>
+  <button id="startLocalBtn" class="primary-btn">START GAME</button>
+</div>
+
+<div id="onlineHome" class="card hidden">
+  <button class="backLink" data-back="home">‹ Back</button>
+  <div class="setup-row">
+    <label>Your name</label>
+    <input type="text" id="playerName" maxlength="14" placeholder="e.g. Alex">
+  </div>
+  <button class="big-btn" id="btnCreateRoom" style="background:linear-gradient(135deg,#22c55e,#15803d);">
+    <span class="emoji">➕</span><span>Create Room<small>Get a code to share with friends</small></span>
+  </button>
+  <button class="big-btn" id="btnJoinRoom" style="background:linear-gradient(135deg,#8b5cf6,#6d28d9);">
+    <span class="emoji">🔑</span><span>Join Room<small>Enter a code someone shared with you</small></span>
+  </button>
+  <div class="errorMsg" id="onlineHomeError"></div>
+</div>
+
+<div id="createForm" class="card hidden">
+  <button class="backLink" data-back="onlineHome">‹ Back</button>
+  <div class="setup-row">
+    <label>Total players (2-4)</label>
+    <div class="choice-group" id="totalGroupOnline">
+      <button class="choice-btn" data-val="2">2</button>
+      <button class="choice-btn" data-val="3">3</button>
+      <button class="choice-btn" data-val="4">4</button>
+    </div>
+  </div>
+  <div class="setup-row">
+    <label>Human players (including you)</label>
+    <div class="choice-group" id="humanGroupOnline"></div>
+    <div class="hint">Open human slots wait for friends to join with the code. Empty ones can be filled with bots from the lobby.</div>
+  </div>
+  <div class="setup-row">
+    <label>Difficulty</label>
+    <button class="mode-btn normal active" data-mode="normal" id="normalBtnOnline">🙂 NORMAL
+      <small>Friendly board · 6 always gives a bonus turn</small></button>
+    <button class="mode-btn hard" data-mode="hard" id="hardBtnOnline">🔥 HARD
+      <small>Meaner snakes, exact roll to win, 6 only sometimes gives a bonus turn</small></button>
+  </div>
+  <button id="createRoomBtn" class="primary-btn">CREATE ROOM</button>
+  <div class="errorMsg" id="createError"></div>
+</div>
+
+<div id="joinForm" class="card hidden">
+  <button class="backLink" data-back="onlineHome">‹ Back</button>
+  <div class="setup-row">
+    <label>Room code</label>
+    <input type="text" id="joinCode" maxlength="5" placeholder="ABCDE">
+  </div>
+  <button id="joinRoomBtn" class="primary-btn">JOIN ROOM</button>
+  <div class="errorMsg" id="joinError"></div>
+</div>
+
+<div id="lobby" class="card hidden">
+  <button class="backLink" data-back="onlineHome" id="lobbyBack">‹ Leave</button>
+  <h2 class="subtitle">Share this code:</h2>
+  <div id="roomCodeBig">-----</div>
+  <ul class="lobbyList" id="lobbyList"></ul>
+  <button id="fillBotsBtn" class="primary-btn" style="background:linear-gradient(90deg,#64748b,#475569); color:#fff;">FILL EMPTY SEATS WITH BOTS</button>
+  <button id="startOnlineBtn" class="primary-btn">START GAME</button>
+  <div class="hint" id="lobbyHint"></div>
+</div>
+
+<div id="game" class="hidden">
+  <div id="topbar">
+    <span style="display:flex; gap:6px;">
+      <span id="modeTag" class="normal">NORMAL</span>
+      <span id="roomTag" class="hidden">ONLINE</span>
+    </span>
+    <button id="restartBtn">↺ Exit</button>
+  </div>
+  <div id="players"></div>
+  <div id="boardWrap">
+    <div id="board"></div>
+    <svg id="svgOverlay" viewBox="0 0 500 500"></svg>
+    <div class="tokens-layer" id="tokensLayer"></div>
+  </div>
+  <div id="controls">
+    <div id="diceBox">🎲</div>
+    <button id="rollBtn">ROLL DICE</button>
+  </div>
+  <div id="turnMsg">Ready</div>
+  <div id="log"></div>
+</div>
+
+<div id="winOverlay" class="hidden">
+  <h2 id="winText">🎉</h2>
+  <button id="playAgainBtn">Back to Menu</button>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ======================================================================
+     SUPABASE CONFIG — replace with YOUR OWN project's URL + anon key.
+     See README.md for step-by-step setup (create project, run the SQL,
+     copy these two values from Project Settings → API).
+     Until this is filled in, "Play Online" shows a friendly notice and
+     only Face-to-Face mode works.
+  ====================================================================== */
+  const SUPABASE_CONFIG = {
+    url: "https://gjyzkmnnbssmkqdopryy.supabase.co",       // e.g. "https://abcdefgh.supabase.co"
+    anonKey: "sb_publishable_SCP7cbQXbShqS36x1NkAdQ_jkiKRhyp"
+  };
+
+  let sb = null;
+  let backendReady = false;
+  try{
+    if(SUPABASE_CONFIG.url && SUPABASE_CONFIG.url !== "YOUR_SUPABASE_URL" &&
+       SUPABASE_CONFIG.anonKey && SUPABASE_CONFIG.anonKey !== "YOUR_SUPABASE_ANON_KEY"){
+      sb = window.supabase.createClient(SUPABASE_CONFIG.url, SUPABASE_CONFIG.anonKey);
+      backendReady = true;
+    }
+  }catch(e){ console.warn("Supabase init failed", e); }
+
+  document.getElementById('backendStatus').textContent = backendReady
+    ? ""
+    : "ℹ️ Online play is enabled .";
+
+  /* ---------------- IDENTITY (persisted locally) ---------------- */
+  function uuid(){
+    if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{
+      const r=Math.random()*16|0, v=c==='x'?r:(r&0x3|0x8); return v.toString(16);
+    });
+  }
+  let MY_UID = localStorage.getItem('sl_uid');
+  if(!MY_UID){ MY_UID = uuid(); localStorage.setItem('sl_uid', MY_UID); }
+
+  /* ---------------- CONSTANTS ---------------- */
+  const COLORS = {1:"var(--p1)",2:"var(--p2)",3:"var(--p3)",4:"var(--p4)"};
+  const NAMES  = {1:"Red",2:"Blue",3:"Green",4:"Yellow"};
+
+  const BOARDS = {
+    normal:{
+      ladders:{2:38,7:14,8:31,15:26,21:42,28:84,36:44,51:67,71:91,78:98,87:94},
+      snakes:{16:6,46:25,49:11,62:19,64:60,74:53,89:68,92:88,95:75,99:78}
+    },
+    hard:{
+      ladders:{4:14,9:29,20:38,40:59,51:67,63:81},
+      snakes:{16:6,24:5,34:6,46:5,49:11,56:1,62:19,64:22,74:41,87:24,89:53,92:25,95:56,98:16,99:41}
+    }
+  };
+  const HARD_SIX_BONUS_CHANCE = 0.3; // "a few chances" of a bonus turn on hard mode
+
+  /* ---------------- NAVIGATION ---------------- */
+  const SCREENS = ['home','localSetup','onlineHome','createForm','joinForm','lobby','game'];
+  function showScreen(id){
+    SCREENS.forEach(s=>document.getElementById(s).classList.toggle('hidden', s!==id));
+  }
+  document.querySelectorAll('.backLink').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      if(b.id==='lobbyBack') leaveLobby();
+      showScreen(b.dataset.back);
+    });
+  });
+  document.getElementById('btnLocal').addEventListener('click', ()=>showScreen('localSetup'));
+  document.getElementById('btnOnline').addEventListener('click', ()=>{
+    document.getElementById('onlineHomeError').textContent = backendReady ? "" :
+      "Online play isn't configured yet — see README.md.";
+    document.getElementById('playerName').value = localStorage.getItem('sl_name') || "";
+    showScreen('onlineHome');
+  });
+
+  /* ================= LOCAL SETUP UI ================= */
+  let localTotal = 2, localHumans = 2, localMode = "normal";
+  const totalGroup = document.getElementById('totalGroup');
+  const humanGroup = document.getElementById('humanGroup');
+
+  function renderHumanChoices(group, total, current, onPick){
+    group.innerHTML = "";
+    for(let i=1;i<=total;i++){
+      const b = document.createElement('button');
+      b.className = 'choice-btn' + (i===current?' active':'');
+      b.textContent = i===total ? `${i} (no bots)` : String(i);
+      b.dataset.val = i;
+      b.addEventListener('click', ()=>{
+        onPick(i);
+        [...group.children].forEach(c=>c.classList.remove('active'));
+        b.classList.add('active');
+      });
+      group.appendChild(b);
+    }
+  }
+  renderHumanChoices(humanGroup, localTotal, localHumans, v=>localHumans=v);
+  [...totalGroup.children].forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      [...totalGroup.children].forEach(c=>c.classList.remove('active'));
+      btn.classList.add('active');
+      localTotal = parseInt(btn.dataset.val,10);
+      if(localHumans>localTotal) localHumans = localTotal;
+      renderHumanChoices(humanGroup, localTotal, localHumans, v=>localHumans=v);
+    });
+  });
+  totalGroup.children[0].classList.add('active');
+
+  document.getElementById('normalBtn').addEventListener('click', ()=>setLocalMode('normal'));
+  document.getElementById('hardBtn').addEventListener('click', ()=>setLocalMode('hard'));
+  function setLocalMode(m){
+    localMode = m;
+    document.getElementById('normalBtn').classList.toggle('active', m==='normal');
+    document.getElementById('hardBtn').classList.toggle('active', m==='hard');
+  }
+  document.getElementById('startLocalBtn').addEventListener('click', ()=>{
+    const players = [];
+    for(let i=1;i<=localTotal;i++){
+      players.push({id:i, uid:null, name:NAMES[i], isBot:i>localHumans, pos:0, finished:false});
+    }
+    startLocalGame(players, localMode);
+  });
+
+  /* ================= ONLINE SETUP UI ================= */
+  let onlineTotal = 2, onlineHumans = 2, onlineMode = "normal";
+  const totalGroupOnline = document.getElementById('totalGroupOnline');
+  const humanGroupOnline = document.getElementById('humanGroupOnline');
+  renderHumanChoices(humanGroupOnline, onlineTotal, onlineHumans, v=>onlineHumans=v);
+  [...totalGroupOnline.children].forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      [...totalGroupOnline.children].forEach(c=>c.classList.remove('active'));
+      btn.classList.add('active');
+      onlineTotal = parseInt(btn.dataset.val,10);
+      if(onlineHumans>onlineTotal) onlineHumans = onlineTotal;
+      renderHumanChoices(humanGroupOnline, onlineTotal, onlineHumans, v=>onlineHumans=v);
+    });
+  });
+  totalGroupOnline.children[0].classList.add('active');
+  document.getElementById('normalBtnOnline').addEventListener('click', ()=>setOnlineMode('normal'));
+  document.getElementById('hardBtnOnline').addEventListener('click', ()=>setOnlineMode('hard'));
+  function setOnlineMode(m){
+    onlineMode = m;
+    document.getElementById('normalBtnOnline').classList.toggle('active', m==='normal');
+    document.getElementById('hardBtnOnline').classList.toggle('active', m==='hard');
+  }
+
+  document.getElementById('btnCreateRoom').addEventListener('click', ()=>{ saveName(); showScreen('createForm'); });
+  document.getElementById('btnJoinRoom').addEventListener('click', ()=>{ saveName(); showScreen('joinForm'); });
+  function saveName(){
+    const n = document.getElementById('playerName').value.trim();
+    if(n) localStorage.setItem('sl_name', n);
+  }
+  function myName(){
+    return (document.getElementById('playerName').value.trim() || localStorage.getItem('sl_name') || 'Player');
+  }
+
+  /* ================= ROOM CODE HELPERS ================= */
+  const CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  function randomCode(){
+    let c='';
+    for(let i=0;i<5;i++) c += CODE_CHARS[Math.floor(Math.random()*CODE_CHARS.length)];
+    return c;
+  }
+  async function generateUniqueCode(){
+    for(let tries=0; tries<6; tries++){
+      const code = randomCode();
+      const {data} = await sb.from('slgames').select('code').eq('code',code).maybeSingle();
+      if(!data) return code;
+    }
+    return randomCode() + Math.floor(Math.random()*9);
+  }
+
+  /* ================= DB ROW <-> APP STATE MAPPING ================= */
+  // DB columns are snake_case; internal game state stays camelCase everywhere else.
+  function mapRowToState(row){
+    return {
+      mode: row.mode, total: row.total, hostUid: row.host_uid, status: row.status,
+      turnIndex: row.turn_index, players: row.players, moveSeq: row.move_seq,
+      lastMove: row.last_move, winnerId: row.winner_id, version: row.version
+    };
+  }
+
+  /* ================= OPTIMISTIC-CONCURRENCY UPDATE HELPER =================
+     Supabase/Postgres has no client-side transaction API like Firestore's
+     runTransaction, so we emulate one: read the row, compute a patch, then
+     write it back conditioned on the version column being unchanged. If
+     another client updated first, the conditional UPDATE matches 0 rows
+     and we retry. mutateFn may throw to abort with a specific error, or
+     return null to signal "nothing to change". */
+  async function updateRoomOptimistic(code, mutateFn, maxRetries=6){
+    for(let i=0;i<maxRetries;i++){
+      const {data:current, error} = await sb.from('slgames').select('*').eq('code',code).single();
+      if(error || !current) throw new Error('NOTFOUND');
+      const patch = mutateFn(current);
+      if(patch===null) return current;
+      const newVersion = (current.version||0)+1;
+      const {data:updated, error:updErr} = await sb.from('slgames')
+        .update({...patch, version:newVersion})
+        .eq('code', code).eq('version', current.version||0)
+        .select();
+      if(updErr) throw updErr;
+      if(updated && updated.length>0) return updated[0];
+      // version mismatch -> someone else wrote first, retry
+    }
+    throw new Error('CONFLICT');
+  }
+
+  /* ================= CREATE ROOM ================= */
+  document.getElementById('createRoomBtn').addEventListener('click', async ()=>{
+    const errEl = document.getElementById('createError');
+    errEl.textContent = "";
+    if(!backendReady){ errEl.textContent = "Online play isn't configured — see README.md."; return; }
+    const btn = document.getElementById('createRoomBtn');
+    btn.disabled = true; btn.textContent = "Creating…";
+    try{
+      const code = await generateUniqueCode();
+      const players = [];
+      for(let i=1;i<=onlineTotal;i++){
+        if(i===1) players.push({id:1, uid:MY_UID, name:myName(), isBot:false, pos:0, finished:false});
+        else if(i<=onlineHumans) players.push({id:i, uid:null, name:null, isBot:false, pos:0, finished:false});
+        else players.push({id:i, uid:null, name:`Bot ${i}`, isBot:true, pos:0, finished:false});
+      }
+      const {error} = await sb.from('slgames').insert({
+        code, mode:onlineMode, total:onlineTotal, host_uid:MY_UID, status:'waiting',
+        turn_index:0, players, move_seq:0, last_move:null, winner_id:null, version:0
+      });
+      if(error) throw error;
+      enterLobby(code);
+    }catch(e){
+      console.error(e);
+      errEl.textContent = "Couldn't create room. Check your connection / Supabase setup.";
+    }
+    btn.disabled = false; btn.textContent = "CREATE ROOM";
+  });
+
+  /* ================= JOIN ROOM ================= */
+  document.getElementById('joinRoomBtn').addEventListener('click', async ()=>{
+    const errEl = document.getElementById('joinError');
+    errEl.textContent = "";
+    if(!backendReady){ errEl.textContent = "Online play isn't configured — see README.md."; return; }
+    const code = document.getElementById('joinCode').value.trim().toUpperCase();
+    if(code.length<4){ errEl.textContent = "Enter the room code."; return; }
+    const btn = document.getElementById('joinRoomBtn');
+    btn.disabled = true; btn.textContent = "Joining…";
+    try{
+      await updateRoomOptimistic(code, (current)=>{
+        if(current.status !== 'waiting') throw new Error('STARTED');
+        const already = current.players.find(p=>p.uid===MY_UID);
+        if(already) return null;
+        const idx = current.players.findIndex(p=>!p.isBot && !p.uid);
+        if(idx===-1) throw new Error('FULL');
+        const players = current.players.map((p,i)=> i===idx ? {...p, uid:MY_UID, name:myName()} : p);
+        return {players};
+      });
+      enterLobby(code);
+    }catch(e){
+      if(e.message==='NOTFOUND') errEl.textContent = "No room found with that code.";
+      else if(e.message==='STARTED') errEl.textContent = "That game already started.";
+      else if(e.message==='FULL') errEl.textContent = "That room is full.";
+      else { console.error(e); errEl.textContent = "Couldn't join. Try again."; }
+    }
+    btn.disabled = false; btn.textContent = "JOIN ROOM";
+  });
+
+  /* ================= LOBBY ================= */
+  let currentRoomCode = null;
+  let roomChannel = null;
+
+  function enterLobby(code){
+    currentRoomCode = code;
+    document.getElementById('roomCodeBig').textContent = code;
+    showScreen('lobby');
+    attachRoomListener(code);
+  }
+  function leaveLobby(){
+    if(roomChannel){ sb.removeChannel(roomChannel); roomChannel=null; }
+    currentRoomCode = null;
+  }
+
+  function renderLobby(state){
+    const list = document.getElementById('lobbyList');
+    list.innerHTML = "";
+    state.players.forEach(p=>{
+      const li = document.createElement('li');
+      const dot = document.createElement('span');
+      dot.className = 'dot'; dot.style.background = COLORS[p.id];
+      li.appendChild(dot);
+      const label = document.createElement('span');
+      if(p.isBot) label.textContent = p.name + ' 🤖';
+      else if(p.uid) label.textContent = p.name + (p.uid===MY_UID ? ' (you)' : '');
+      else label.textContent = 'Waiting for player…';
+      li.appendChild(label);
+      const tag = document.createElement('span');
+      tag.className = 'tag';
+      tag.textContent = p.uid===state.hostUid ? 'HOST' : '';
+      li.appendChild(tag);
+      list.appendChild(li);
+    });
+    const allFilled = state.players.every(p=>p.isBot || p.uid);
+    const iAmHost = state.hostUid === MY_UID;
+    document.getElementById('startOnlineBtn').classList.toggle('hidden', !iAmHost);
+    document.getElementById('fillBotsBtn').classList.toggle('hidden', !iAmHost || allFilled);
+    document.getElementById('startOnlineBtn').disabled = !allFilled;
+    document.getElementById('lobbyHint').textContent = iAmHost
+      ? (allFilled ? "All seats filled — start when ready!" : "Waiting for everyone to join, or fill empty seats with bots.")
+      : "Waiting for the host to start the game…";
+  }
+
+  document.getElementById('fillBotsBtn').addEventListener('click', async ()=>{
+    try{
+      await updateRoomOptimistic(currentRoomCode, current=>{
+        const players = current.players.map(p=> (!p.isBot && !p.uid) ? {...p, isBot:true, name:`Bot ${p.id}`} : p);
+        return {players};
+      });
+    }catch(e){ console.error(e); }
+  });
+
+  document.getElementById('startOnlineBtn').addEventListener('click', async ()=>{
+    try{
+      await updateRoomOptimistic(currentRoomCode, ()=>({status:'playing'}));
+    }catch(e){ console.error(e); }
+  });
+
+  function attachRoomListener(code){
+    if(roomChannel){ sb.removeChannel(roomChannel); roomChannel=null; }
+    mode = 'online';
+    let processedSeq = -1;
+    let inGame = false;
+
+    function handleRow(row){
+      const state = mapRowToState(row);
+      if(state.status === 'waiting'){ renderLobby(state); return; }
+      if(!inGame){ inGame = true; enterOnlineGameScreen(state); processedSeq = -1; }
+      handleOnlineSnapshot(state, processedSeq, seq=>processedSeq=seq);
+    }
+
+    sb.from('slgames').select('*').eq('code',code).single().then(({data,error})=>{
+      if(error || !data){ alert("Room not found or closed."); showScreen('home'); return; }
+      handleRow(data);
+    });
+
+    roomChannel = sb.channel('room_'+code)
+      .on('postgres_changes', {event:'*', schema:'public', table:'slgames', filter:`code=eq.${code}`}, payload=>{
+        if(payload.eventType==='DELETE'){ alert("Room closed."); showScreen('home'); leaveLobby(); return; }
+        handleRow(payload.new);
+      })
+      .subscribe();
+  }
+
+  /* ======================================================================
+     SHARED BOARD GEOMETRY / RENDERING (used by both local & online modes)
+  ====================================================================== */
+  function squareToRC(n){
+    const idx = n-1;
+    const rowFromBottom = Math.floor(idx/10);
+    let col = idx % 10;
+    if(rowFromBottom % 2 === 1) col = 9-col;
+    const row = 9 - rowFromBottom;
+    return {row,col};
+  }
+  function centerXY(n){
+    const {row,col} = squareToRC(n);
+    return {x: col*50+25, y: row*50+25};
+  }
+
+  let boardSnakes = {}, boardLadders = {};
+
+  function buildBoardDOM(){
+    const board = document.getElementById('board');
+    board.innerHTML = "";
+    for(let domRow=0; domRow<10; domRow++){
+      for(let domCol=0; domCol<10; domCol++){
+        const rowFromBottom = 9-domRow;
+        let col = domCol;
+        if(rowFromBottom % 2 === 1) col = 9-domCol;
+        const num = rowFromBottom*10 + col + 1;
+        const cell = document.createElement('div');
+        let cls = 'cell ' + (((domRow+domCol)%2===0) ? 'even':'odd');
+        if(num===1) cls += ' start';
+        if(num===100) cls += ' finish';
+        if(boardSnakes[num]) cls += ' snake-cell';
+        if(boardLadders[num]) cls += ' ladder-cell';
+        cell.className = cls;
+        const span = document.createElement('span');
+        span.textContent = num;
+        cell.appendChild(span);
+        board.appendChild(cell);
+      }
+    }
+  }
+
+  function drawOverlay(){
+    const svg = document.getElementById('svgOverlay');
+    svg.innerHTML = "";
+    const ns = "http://www.w3.org/2000/svg";
+    const defs = document.createElementNS(ns,'defs');
+    svg.appendChild(defs);
+
+    function addGradient(id, c1, c2){
+      const g = document.createElementNS(ns,'linearGradient');
+      g.setAttribute('id', id); g.setAttribute('x1','0%'); g.setAttribute('y1','0%');
+      g.setAttribute('x2','100%'); g.setAttribute('y2','100%');
+      const s1 = document.createElementNS(ns,'stop'); s1.setAttribute('offset','0%'); s1.setAttribute('stop-color',c1);
+      const s2 = document.createElementNS(ns,'stop'); s2.setAttribute('offset','100%'); s2.setAttribute('stop-color',c2);
+      g.appendChild(s1); g.appendChild(s2);
+      defs.appendChild(g);
+    }
+    addGradient('snakeGrad', '#7f1d1d', '#f87171');
+    addGradient('ladderGrad', '#fbbf24', '#92400e');
+
+    function el(tag, attrs){
+      const e = document.createElementNS(ns, tag);
+      Object.entries(attrs).forEach(([k,v])=>e.setAttribute(k,v));
+      svg.appendChild(e);
+      return e;
+    }
+
+    Object.entries(boardLadders).forEach(([from,to])=>{
+      const a = centerXY(parseInt(from,10)), b = centerXY(parseInt(to,10));
+      const dx=b.x-a.x, dy=b.y-a.y, len=Math.hypot(dx,dy);
+      const nx=-dy/len*7, ny=dx/len*7;
+      el('line',{x1:a.x+nx,y1:a.y+ny,x2:b.x+nx,y2:b.y+ny,stroke:'url(#ladderGrad)','stroke-width':5,'stroke-linecap':'round'});
+      el('line',{x1:a.x-nx,y1:a.y-ny,x2:b.x-nx,y2:b.y-ny,stroke:'url(#ladderGrad)','stroke-width':5,'stroke-linecap':'round'});
+      const steps = Math.max(4, Math.round(len/20));
+      for(let i=1;i<steps;i++){
+        const px=a.x+dx*i/steps, py=a.y+dy*i/steps;
+        el('line',{x1:px+nx,y1:py+ny,x2:px-nx,y2:py-ny,stroke:'#78350f','stroke-width':3.5,'stroke-linecap':'round'});
+      }
+    });
+
+    Object.entries(boardSnakes).forEach(([from,to])=>{
+      const a = centerXY(parseInt(from,10)), b = centerXY(parseInt(to,10));
+      const dx=b.x-a.x, dy=b.y-a.y, dist=Math.hypot(dx,dy);
+      const nx=-dy/dist, ny=dx/dist;
+      const wave = Math.min(26, dist*0.16) * (((parseInt(from,10)+parseInt(to,10))%2===0)?1:-1);
+      const p1 = {x:a.x+dx*0.33+nx*wave, y:a.y+dy*0.33+ny*wave};
+      const p2 = {x:a.x+dx*0.66-nx*wave, y:a.y+dy*0.66-ny*wave};
+      const d = `M ${a.x} ${a.y} C ${p1.x} ${p1.y}, ${p2.x} ${p2.y}, ${b.x} ${b.y}`;
+      el('path',{d, stroke:'url(#snakeGrad)','stroke-width':8,fill:'none','stroke-linecap':'round'});
+      el('path',{d, stroke:'#00000030','stroke-width':8,fill:'none','stroke-linecap':'round','stroke-dasharray':'3 7'});
+      el('circle',{cx:b.x, cy:b.y, r:3, fill:'#7f1d1d'});
+      el('ellipse',{cx:a.x, cy:a.y, rx:9, ry:7, fill:'#b91c1c', stroke:'#450a0a','stroke-width':1.5});
+      const hx = -dy/dist, hy = dx/dist;
+      el('circle',{cx:a.x+hx*4-dx/dist*2, cy:a.y+hy*4-dy/dist*2, r:1.6, fill:'#fff'});
+      el('circle',{cx:a.x-hx*4-dx/dist*2, cy:a.y-hy*4-dy/dist*2, r:1.6, fill:'#fff'});
+      el('circle',{cx:a.x+hx*4-dx/dist*2, cy:a.y+hy*4-dy/dist*2, r:0.8, fill:'#000'});
+      el('circle',{cx:a.x-hx*4-dx/dist*2, cy:a.y-hy*4-dy/dist*2, r:0.8, fill:'#000'});
+      const fx1 = a.x-dx/dist*12+hx*2.5, fy1 = a.y-dy/dist*12+hy*2.5;
+      const fx2 = a.x-dx/dist*12-hx*2.5, fy2 = a.y-dy/dist*12-hy*2.5;
+      el('line',{x1:a.x-dx/dist*8, y1:a.y-dy/dist*8, x2:fx1, y2:fy1, stroke:'#450a0a','stroke-width':1});
+      el('line',{x1:a.x-dx/dist*8, y1:a.y-dy/dist*8, x2:fx2, y2:fy2, stroke:'#450a0a','stroke-width':1});
+    });
+  }
+
+  function renderPlayers(state){
+    const wrap = document.getElementById('players');
+    wrap.innerHTML = "";
+    const cp = state.players[state.turnIndex];
+    state.players.forEach((p)=>{
+      const chip = document.createElement('div');
+      chip.className = 'pchip' + (cp && p.id===cp.id && !p.finished ? ' active':'') + (p.finished?' done':'');
+      const label = p.name || `Seat ${p.id}`;
+      chip.innerHTML = `<span class="dot" style="background:${COLORS[p.id]}"></span>
+        ${label}${p.isBot?' 🤖':''} <span class="pos">${p.finished? '🏁':'#'+p.pos}</span>`;
+      wrap.appendChild(chip);
+    });
+  }
+
+  function renderTokens(players){
+    const layer = document.getElementById('tokensLayer');
+    layer.innerHTML = "";
+    const byPos = {};
+    players.forEach(p=>{
+      if(p.pos<1) return;
+      byPos[p.pos] = byPos[p.pos]||[];
+      byPos[p.pos].push(p);
+    });
+    Object.entries(byPos).forEach(([pos, plist])=>{
+      const {x,y} = centerXY(parseInt(pos,10));
+      plist.forEach((p,i)=>{
+        const offset = plist.length>1 ? (i - (plist.length-1)/2)*6 : 0;
+        const elDiv = document.createElement('div');
+        elDiv.className = 'token';
+        elDiv.style.background = COLORS[p.id];
+        elDiv.style.left = `calc(${(x+offset)/500*100}% - 4.75%)`;
+        elDiv.style.top  = `calc(${y/500*100}% - 4.75%)`;
+        elDiv.textContent = p.id;
+        layer.appendChild(elDiv);
+      });
+    });
+  }
+
+  function setTurnMessage(msg){ document.getElementById('turnMsg').textContent = msg; }
+  function logMsg(msg){
+    const l = document.getElementById('log');
+    const line = document.createElement('div');
+    line.textContent = msg;
+    l.prepend(line);
+  }
+
+  /* ======================================================================
+     PURE GAME ENGINE — same function drives local & online play
+  ====================================================================== */
+  function computeMove(gameState, roll){
+    const players = gameState.players.map(p=>({...p}));
+    const pIdx = gameState.turnIndex;
+    const p = players[pIdx];
+    const from = p.pos;
+    const isHard = gameState.mode === 'hard';
+    let landed = from + roll;
+    let overshoot = false;
+
+    if(landed > 100){
+      if(isHard){ overshoot = true; landed = from; }
+      else { landed = 100 - (landed-100); }
+    }
+
+    let snake=null, ladder=null, finishedNow=false;
+    let finalPos = landed;
+    if(!overshoot){
+      if(boardSnakes[landed]){ snake={from:landed, to:boardSnakes[landed]}; finalPos=boardSnakes[landed]; }
+      else if(boardLadders[landed]){ ladder={from:landed, to:boardLadders[landed]}; finalPos=boardLadders[landed]; }
+    }
+    p.pos = finalPos;
+    if(finalPos===100){ p.finished = true; finishedNow = true; }
+    players[pIdx] = p;
+
+    let bonus = false;
+    if(!p.finished && roll===6){
+      bonus = isHard ? (Math.random() < HARD_SIX_BONUS_CHANCE) : true;
+    }
+
+    let turnIndex = gameState.turnIndex;
+    let status = gameState.status;
+    let winnerId = gameState.winnerId || null;
+
+    if(finishedNow){
+      status = 'finished';
+      winnerId = p.id;
+    } else if(!bonus){
+      let next = turnIndex;
+      for(let i=0;i<players.length;i++){
+        next = (next+1) % players.length;
+        if(!players[next].finished) break;
+      }
+      turnIndex = next;
+    }
+
+    const lastMove = {
+      seq: (gameState.moveSeq||0) + 1,
+      playerId: p.id,
+      from, to: landed, roll, snake, ladder, finishedNow, bonus, overshoot
+    };
+
+    return { players, turnIndex, status, winnerId, moveSeq: lastMove.seq, lastMove };
+  }
+
+  function playMoveAnimation(finalPlayers, lastMove, onDone){
+    const activePlayer = finalPlayers.find(p=>p.id===lastMove.playerId);
+    const working = finalPlayers.map(p=> p.id===lastMove.playerId ? {...p, pos:lastMove.from} : p);
+    const activeIdx = working.findIndex(p=>p.id===lastMove.playerId);
+    let cur = lastMove.from;
+    const target = lastMove.overshoot ? lastMove.from : lastMove.to;
+    const dir = target>cur ? 1 : -1;
+
+    logMsg(`${activePlayer.name||('Seat '+activePlayer.id)} rolled ${lastMove.roll}`);
+
+    function step(){
+      if(cur===target){ afterMain(); return; }
+      cur += dir;
+      working[activeIdx] = {...working[activeIdx], pos:cur};
+      renderTokens(working);
+      setTimeout(step, 150);
+    }
+    function afterMain(){
+      if(lastMove.snake){
+        setTurnMessage(`🐍 ${activePlayer.name} bitten by a snake! ${lastMove.snake.from} → ${lastMove.snake.to}`);
+        logMsg(`🐍 Snake: ${lastMove.snake.from} → ${lastMove.snake.to}`);
+        setTimeout(()=>{
+          working[activeIdx] = {...working[activeIdx], pos:lastMove.snake.to};
+          renderTokens(working);
+          setTimeout(onDone, 350);
+        }, 400);
+      } else if(lastMove.ladder){
+        setTurnMessage(`🪜 ${activePlayer.name} climbs a ladder! ${lastMove.ladder.from} → ${lastMove.ladder.to}`);
+        logMsg(`🪜 Ladder: ${lastMove.ladder.from} → ${lastMove.ladder.to}`);
+        setTimeout(()=>{
+          working[activeIdx] = {...working[activeIdx], pos:lastMove.ladder.to};
+          renderTokens(working);
+          setTimeout(onDone, 350);
+        }, 400);
+      } else if(lastMove.overshoot){
+        setTurnMessage(`${activePlayer.name} rolled ${lastMove.roll} but overshot 100! Stays put.`);
+        setTimeout(onDone, 300);
+      } else {
+        setTimeout(onDone, 150);
+      }
+    }
+    step();
+  }
+
+  function rollDiceAnimated(cb){
+    const dice = document.getElementById('diceBox');
+    dice.classList.add('rolling');
+    let ticks = 0;
+    const spin = setInterval(()=>{
+      dice.textContent = 1+Math.floor(Math.random()*6);
+      ticks++;
+      if(ticks>6){
+        clearInterval(spin);
+        const roll = 1+Math.floor(Math.random()*6);
+        dice.textContent = roll;
+        dice.classList.remove('rolling');
+        cb(roll);
+      }
+    },70);
+  }
+
+  /* ======================================================================
+     LOCAL (PASS & PLAY) DRIVER
+  ====================================================================== */
+  let mode = null; // 'local' | 'online'
+  let localState = null;
+
+  function startLocalGame(players, gameMode){
+    mode = 'local';
+    boardSnakes = BOARDS[gameMode].snakes;
+    boardLadders = BOARDS[gameMode].ladders;
+    localState = { mode:gameMode, players, turnIndex:0, status:'playing', winnerId:null, moveSeq:0 };
+
+    showScreen('game');
+    document.getElementById('roomTag').classList.add('hidden');
+    document.getElementById('modeTag').textContent = gameMode==='hard'?'HARD':'NORMAL';
+    document.getElementById('modeTag').className = gameMode==='hard'?'hard':'normal';
+    document.getElementById('log').innerHTML = "";
+    document.getElementById('winOverlay').classList.add('hidden');
+
+    buildBoardDOM(); drawOverlay();
+    renderPlayers(localState); renderTokens(localState.players);
+    setTurnMessage(`${localState.players[0].name}'s turn`);
+    updateLocalRollButton();
+    maybeAutoRollLocalBot();
+  }
+
+  function updateLocalRollButton(){
+    const btn = document.getElementById('rollBtn');
+    const cp = localState.players[localState.turnIndex];
+    btn.disabled = cp.isBot;
+    btn.textContent = cp.isBot ? `${cp.name} (bot) rolling…` : 'ROLL DICE';
+  }
+
+  function maybeAutoRollLocalBot(){
+    const cp = localState.players[localState.turnIndex];
+    if(cp.isBot && localState.status==='playing'){
+      setTimeout(()=>doLocalRoll(), 700);
+    }
+  }
+
+  document.getElementById('rollBtn').addEventListener('click', ()=>{
+    if(mode!=='local') return;
+    const cp = localState.players[localState.turnIndex];
+    if(cp.isBot) return;
+    doLocalRoll();
+  });
+
+  let localBusy = false;
+  function doLocalRoll(){
+    if(localBusy) return;
+    localBusy = true;
+    document.getElementById('rollBtn').disabled = true;
+    rollDiceAnimated(roll=>{
+      const result = computeMove(localState, roll);
+      playMoveAnimation(result.players, result.lastMove, ()=>{
+        localState = { ...localState, players:result.players, turnIndex:result.turnIndex,
+          status:result.status, winnerId:result.winnerId, moveSeq:result.moveSeq };
+        renderPlayers(localState); renderTokens(localState.players);
+        localBusy = false;
+        if(localState.status==='finished'){
+          endGame(localState);
+        } else {
+          if(result.lastMove.bonus) setTurnMessage(`🎲 Rolled a 6 — go again!`);
+          else setTurnMessage(`${localState.players[localState.turnIndex].name}'s turn`);
+          updateLocalRollButton();
+          maybeAutoRollLocalBot();
+        }
+      });
+    });
+  }
+
+  /* ======================================================================
+     ONLINE DRIVER
+  ====================================================================== */
+  let onlineGameState = null; // authoritative, at-rest
+  let onlineBusy = false;
+
+  function enterOnlineGameScreen(state){
+    boardSnakes = BOARDS[state.mode].snakes;
+    boardLadders = BOARDS[state.mode].ladders;
+    showScreen('game');
+    document.getElementById('roomTag').classList.remove('hidden');
+    document.getElementById('roomTag').textContent = 'ROOM ' + currentRoomCode;
+    document.getElementById('modeTag').textContent = state.mode==='hard'?'HARD':'NORMAL';
+    document.getElementById('modeTag').className = state.mode==='hard'?'hard':'normal';
+    document.getElementById('log').innerHTML = "";
+    document.getElementById('winOverlay').classList.add('hidden');
+    buildBoardDOM(); drawOverlay();
+  }
+
+  function handleOnlineSnapshot(state, processedSeq, setProcessed){
+    const incomingSeq = state.moveSeq || 0;
+    if(incomingSeq > 0 && incomingSeq > processedSeq && state.lastMove){
+      setProcessed(incomingSeq);
+      playMoveAnimation(state.players, state.lastMove, ()=>{
+        onlineGameState = state;
+        settleOnlineUI(state);
+      });
+    } else {
+      setProcessed(incomingSeq);
+      onlineGameState = state;
+      renderPlayers(state); renderTokens(state.players);
+      settleOnlineUI(state);
+    }
+  }
+
+  function settleOnlineUI(state){
+    renderPlayers(state); renderTokens(state.players);
+    if(state.status === 'finished'){
+      endGame(state);
+      return;
+    }
+    const cp = state.players[state.turnIndex];
+    const myTurn = !cp.isBot && cp.uid === MY_UID;
+    const iAmHost = state.hostUid === MY_UID;
+
+    document.getElementById('rollBtn').disabled = !myTurn || onlineBusy;
+    document.getElementById('rollBtn').textContent = myTurn ? 'ROLL DICE' : `Waiting for ${cp.name || 'player'}…`;
+    if(myTurn) setTurnMessage("Your turn — roll the dice!");
+    else setTurnMessage(`${cp.name || 'Seat '+cp.id}${cp.isBot?' 🤖':''}'s turn…`);
+
+    if(cp.isBot && iAmHost && !onlineBusy){
+      setTimeout(()=>{ driveBotTurn(state.turnIndex); }, 800);
+    }
+  }
+
+  document.getElementById('rollBtn').addEventListener('click', ()=>{
+    if(mode!=='online' || onlineBusy) return;
+    const state = onlineGameState;
+    if(!state) return;
+    const cp = state.players[state.turnIndex];
+    if(cp.isBot || cp.uid !== MY_UID) return;
+    onlineBusy = true;
+    document.getElementById('rollBtn').disabled = true;
+    rollDiceAnimated(roll=>{
+      commitOnlineMove(state.turnIndex, roll).finally(()=>{ onlineBusy = false; });
+    });
+  });
+
+  function driveBotTurn(expectedTurnIndex){
+    if(onlineBusy) return;
+    onlineBusy = true;
+    rollDiceAnimated(roll=>{
+      commitOnlineMove(expectedTurnIndex, roll).finally(()=>{ onlineBusy = false; });
+    });
+  }
+
+  async function commitOnlineMove(expectedTurnIndex, roll){
+    try{
+      await updateRoomOptimistic(currentRoomCode, (current)=>{
+        if(current.status!=='playing' || current.turn_index!==expectedTurnIndex) return null; // stale, ignore
+        const result = computeMove(mapRowToState(current), roll);
+        return {
+          players: result.players, turn_index: result.turnIndex, status: result.status,
+          winner_id: result.winnerId, move_seq: result.moveSeq, last_move: result.lastMove
+        };
+      });
+    }catch(e){ console.error('move failed', e); }
+  }
+
+  /* ================= END GAME / STATS ================= */
+  function endGame(state){
+    document.getElementById('winOverlay').classList.remove('hidden');
+    const winner = state.players.find(p=>p.id===state.winnerId);
+    document.getElementById('winText').textContent = winner
+      ? `🎉 ${winner.name || 'Seat '+winner.id}${winner.isBot?' (Bot)':''} Wins! 🎉`
+      : `🎉 Game Over 🎉`;
+    saveStats(winner);
+  }
+
+  async function saveStats(winner){
+    if(!backendReady || !sb) return;
+    try{
+      const {data:cur} = await sb.from('players').select('*').eq('uid',MY_UID).maybeSingle();
+      const iWon = winner && winner.uid === MY_UID;
+      await sb.from('players').upsert({
+        uid: MY_UID,
+        name: localStorage.getItem('sl_name') || 'Player',
+        games_played: (cur?.games_played||0) + 1,
+        games_won: (cur?.games_won||0) + (iWon?1:0),
+        last_played: Date.now()
+      }, {onConflict:'uid'});
+    }catch(e){ console.warn('stats save failed (non-fatal)', e); }
+  }
+
+  document.getElementById('restartBtn').addEventListener('click', resetToHome);
+  document.getElementById('playAgainBtn').addEventListener('click', resetToHome);
+  function resetToHome(){
+    leaveLobby();
+    mode = null; localState = null; onlineGameState = null;
+    document.getElementById('winOverlay').classList.add('hidden');
+    showScreen('home');
+  }
+
+  document.addEventListener('dblclick', e=>e.preventDefault());
+
+})();
+</script>
+</body>
+</html>
