@@ -1,7 +1,6 @@
 # 🐍 Snakes & Ladders
 
-A single self-contained `index.html` — no build step, no framework. Works with
-Acode → GitHub → Vercel exactly like before.
+A single self-contained `index.html` — no build step, no framework
 
 ## Features
 - **Face-to-Face mode**: pass one phone around, 2–4 players, empty slots filled by bots.
